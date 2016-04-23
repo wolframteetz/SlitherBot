@@ -1,0 +1,2 @@
+# SlitherBot
+Slither.io bot
