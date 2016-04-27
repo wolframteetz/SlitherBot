@@ -2,12 +2,17 @@
 // @name         SlitherBot
 // @namespace    SlitherBot
 // @version      0.1-ALPHA1
-// @author       j0ll3
+// @author       j0ll3, wolframteetz
 // @match        http://slither.io/
 // @grant        none
 // ==/UserScript==
 
 var version = "0.11";
+// This is a very passive version of the bot with various fixes.
+// It never accelerates, tries to stay away from snakes and eats.
+// todo : Go "eat big" fist (get the size of the food somehow)
+// todo : "Run away" when getting circled
+// todo : "Kill mode"
 
 function SlitherBot() {
 	this.name = "SlitherBot v" + version;
