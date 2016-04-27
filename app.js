@@ -107,8 +107,9 @@ function SlitherBot() {
 		this.log("Started autoBot!");
 		function doBot() {
 			parent.getNearestSnake(function(data) {
-				document.getElementsByClassName("nsi")[19].innerHTML = 'Nearest snake: ' + Math.round(data.blocksAway / 50) + " blocks away";
+				document.getElementsByClassName("nsi")[19].innerHTML = 'Nearest snake: ' + Math.round(data.blocksAway / 20) + " blocks away<br />Last turn " + Math.round(((Date.now() / 1000) % 60) - parent.lastTurned) + " seconds ago by autoBot";
 				if(data.blocksAway < (data.thickness + 210) && data.blocksAway != 0 && ((((Date.now() / 1000) % 60) - parent.lastTurned) > 4 || data.snakeId != latestSnakeTurnedOn)) {
+					latestSnakeTurnedOn = data.snakeId;
 					parent.lastTurned = (Date.now() / 1000) % 60;
 					parent.turnAround();
 				}
