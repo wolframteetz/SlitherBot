@@ -81,7 +81,7 @@ function SlitherBot() {
 		callback({ blocksAway: blocks, thickness: 0, snakeId: sId }); // todo
 	}
 
-	this.getNearestFood = function(callback) {
+	this.getNearestAndSafestFood = function(callback) {
 		this.mySnake = snake;
 		this.currentFood = foods;
 
@@ -93,11 +93,11 @@ function SlitherBot() {
 
 		for(var i = 0; i < c_food.length; i++) {
 			if(c_food[i]) {
-				//if(typeof c_food[i]) {
+				//if(this.isSafeThere(c_food[i].xx, c_food[i].yy)) {
 					var c_dist = (Math.abs(mySnake.xx - c_food[i].xx) + Math.abs(mySnake.yy - c_food[i].yy)) / 2;
 					if(distance == 0 || c_dist < distance) {
 						distance = c_dist;
-						data = { xx: c_food[i].xx, yy: c_food[i].yy };
+						data = { xx: c_food[i].xx, yy: c_food[i].yy, id: c_food[i].id };
 					}
 				//}
 			}
@@ -110,7 +110,7 @@ function SlitherBot() {
 		snakeList = this.snakeList;
 
 		for(var i = 0; i < snakeList.length; i++) {
-			if(Math.abs(xx - snakeList[i].xx) > 50 || Math.abs(yy - snakeList[i].yy) > 50) return false;
+			if(Math.abs(xx - snakeList[i].xx) > 30 || Math.abs(yy - snakeList[i].yy) > 30) return false;
 		}
 
 		return true;
@@ -137,9 +137,28 @@ function SlitherBot() {
 
 	}
 
+	this.foodExists = function(id) {
+		foodList = foods;
+
+		for(var i = 0; i < foodList.length; i++) {
+			if(foodList[i]) {
+				if(foodList[i].id == id) {
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+ 
 	this.autoBot = function() {
 		var parent = this;
 		var latestSnakeTurnedOn = 0;
+
+		var targetedFood = 0;
+		var targetedFoodX = 0;
+		var targetedFoodY = 0;
+
 		this.log("Started autoBot!");
 		function doBot() {
 			parent.getNearestSnake(function(data) {
@@ -148,19 +167,36 @@ function SlitherBot() {
 					latestSnakeTurnedOn = data.snakeId;
 					parent.lastTurned = (Date.now() / 1000) % 60;
 					parent.turnAround();
+				} else {
+					parent.getNearestAndSafestFood(function(data) {
+						if((((Date.now() / 1000) % 60) - parent.lastTurned) > 6) {
+							if(targetedFood != 0 && foodExists(targetedFood)) {
+								data.xx = targetedFoodX;
+								data.yy = targetedFoodY;
+							}
+
+							if(data.xx != 0 && data.yy != 0) {
+								var dX = Math.abs(data.xx - parent.mySnake.xx);
+								var dY = Math.abs(data.yy - parent.mySnake.yy);
+
+								targetedFoodX = data.xx;
+								targetedFoodY = data.yy;
+
+								var rad = Math.atan2(dY, dX);
+								var deg = rad * (180 / Math.PI);
+								var slitherDeg = deg / 1.286; // degrees / 1.286 is the conversion to "SlitherDeg"
+
+								document.getElementsByClassName("nsi")[21].style.color = '#fff';
+								document.getElementsByClassName("nsi")[21].style.font = 'Arial';
+								document.getElementsByClassName("nsi")[21].width = "250px";
+								document.getElementsByClassName("nsi")[21].innerHTML = "Nearest food: " + data.xx + ", " + data.yy + "<br />Setting deg to: " + slitherDeg;
+
+								parent.setDirection(slitherDeg);
+							}
+						}
+					});
 				}
 				setTimeout(function(){doBot();}, 500);
-			});
-			parent.getNearestFood(function(data) {
-				if(parent.isSafeThere(data.xx, data.yy)) {
-					var dX = Math.abs(data.xx - parent.mySnake.xx);
-					var dY = Math.abs(data.yy - parent.mySnake.yy);
-					var rad = Math.atan2(dY, dX);
-					var deg = rad * (180 / Math.PI);
-					var slitherDeg = deg / 2; // i know, not same...
-
-					parent.setDirection(slitherDeg);
-				}
 			});
 		}
 		doBot();
