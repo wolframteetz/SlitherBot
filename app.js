@@ -16,6 +16,7 @@ function SlitherBot() {
 	this.currentDir = 0;
 	this.hideAll = false;
 	this.lastTurned = 0;
+	this.currentFood;
 
 	this.setDirection = function(deg) {
 		if(deg > 240) deg = deg - 240;
@@ -80,6 +81,41 @@ function SlitherBot() {
 		callback({ blocksAway: blocks, thickness: 0, snakeId: sId }); // todo
 	}
 
+	this.getNearestFood = function(callback) {
+		this.mySnake = snake;
+		this.currentFood = foods;
+
+		mySnake = this.mySnake;
+		c_food = this.currentFood;
+
+		var data = { xx: 0, yy: 0 };
+		var distance = 0;
+
+		for(var i = 0; i < c_food.length; i++) {
+			if(c_food[i]) {
+				//if(typeof c_food[i]) {
+					var c_dist = (Math.abs(mySnake.xx - c_food[i].xx) + Math.abs(mySnake.yy - c_food[i].yy)) / 2;
+					if(distance == 0 || c_dist < distance) {
+						distance = c_dist;
+						data = { xx: c_food[i].xx, yy: c_food[i].yy };
+					}
+				//}
+			}
+		}
+		callback(data);
+	}
+
+	this.isSafeThere = function(xx, yy) {
+		this.snakeList = snakes;
+		snakeList = this.snakeList;
+
+		for(var i = 0; i < snakeList.length; i++) {
+			if(Math.abs(xx - snakeList[i].xx) > 50 || Math.abs(yy - snakeList[i].yy) > 50) return false;
+		}
+
+		return true;
+	}
+
 	this.iWantAll = function() {
 		localStorage.edttsg = 1;
 		document.getElementById("fbh").style.display = "none";
@@ -108,12 +144,23 @@ function SlitherBot() {
 		function doBot() {
 			parent.getNearestSnake(function(data) {
 				document.getElementsByClassName("nsi")[19].innerHTML = 'Nearest snake: ' + Math.round(data.blocksAway / 20) + " blocks away<br />Last turn " + Math.round(((Date.now() / 1000) % 60) - parent.lastTurned) + " seconds ago by autoBot";
-				if(data.blocksAway < (data.thickness + 210) && data.blocksAway != 0 && ((((Date.now() / 1000) % 60) - parent.lastTurned) > 4 || data.snakeId != latestSnakeTurnedOn)) {
+				if((data.blocksAway < (data.thickness + 210) && data.blocksAway != 0 && ((((Date.now() / 1000) % 60) - parent.lastTurned) > 4 || data.snakeId != latestSnakeTurnedOn)) || data.blocksAway < (data.thickness + 45)) {
 					latestSnakeTurnedOn = data.snakeId;
 					parent.lastTurned = (Date.now() / 1000) % 60;
 					parent.turnAround();
 				}
 				setTimeout(function(){doBot();}, 500);
+			});
+			parent.getNearestFood(function(data) {
+				if(parent.isSafeThere(data.xx, data.yy)) {
+					var dX = Math.abs(data.xx - parent.mySnake.xx);
+					var dY = Math.abs(data.yy - parent.mySnake.yy);
+					var rad = Math.atan2(dY, dX);
+					var deg = rad * (180 / Math.PI);
+					var slitherDeg = deg / 2; // i know, not same...
+
+					parent.setDirection(slitherDeg);
+				}
 			});
 		}
 		doBot();
