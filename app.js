@@ -7,47 +7,39 @@
 // @grant        none
 // ==/UserScript==
 
-var version = "0.1-ALPHA1";
+var version = "0.11";
 
-function SlitherBot() {
+function SlitherBot() {
 	this.name = "SlitherBot v" + version;
 
 	this.botOn = true;
 	this.currentDir = 0;
 	this.hideAll = false;
 	this.lastTurned = 0;
-	this.currentFood;
+//	this.currentFood;
 
 	this.setDirection = function(deg) {
-		if(deg > 240) deg = deg - 240;
-		if(deg > 480) return; // too big!
+        while (deg<0) deg = deg + 240;
+        while (deg>240) deg = deg - 240;
 		var h = new Uint8Array(1);
-		h[0] = 1 == 1 ? deg : 254;
+		h[0] = deg;
 		ws.send(h);
 		this.currentDir = deg;
-	}
+	};
 
 	this.setAcceleration = function(type) {
 		var h = new Uint8Array(1);
 		h[0] = 1 == type ? 253 : 254;
 		ws.send(h);
-	}
+	};
 
 	this.bot = function() {
 		this.log("Started the bot!");
-		
 		this.setDirection(this.currentDir);
-
 		this.autoTasks();
-	}
+	};
 
-	this.turnAround = function() {
-		this.setAcceleration(1);
-		this.setDirection(Math.abs(this.currentDir - 123 - 10));
-		this.setAcceleration(0);
-	}
-
-	this.snakeList = snakes;
+    this.snakeList = snakes;
 
 	this.mySnake = snake;
 
@@ -60,26 +52,32 @@ function SlitherBot() {
 
 		var blocks = 0;
 		var sId = 0;
+        var nsdXX = 0;
+        var nsdYY = 0;
 		for(var i = 0; i < snakeList.length; i++) {
 			if(snakeList[i].xx != mySnake.xx && snakeList[i].yy != mySnake.yy) {
 				var tblocks = (Math.abs(mySnake.xx - snakeList[i].xx) + Math.abs(mySnake.yy - snakeList[i].yy)) / 2;
-				if(tblocks < blocks || blocks == 0) {
+				if(tblocks < blocks || blocks === 0) {
 					blocks = tblocks;
+                    nsdXX = mySnake.xx - snakeList[i].xx;
+                    nsdYY = mySnake.yy - snakeList[i].yy;
 					sId = snakeList[i].id;
 				}
 
 				for(var j = 0; j < snakeList[i].pts.length; j++) {
-					var tblocks = (Math.abs(mySnake.xx - snakeList[i].pts[j].xx) + Math.abs(mySnake.yy - snakeList[i].pts[j].yy)) / 2;
+					tblocks = (Math.abs(mySnake.xx - snakeList[i].pts[j].xx) + Math.abs(mySnake.yy - snakeList[i].pts[j].yy)) / 2;
 					if(tblocks < blocks) {
 						blocks = tblocks;
+                        nsdXX = mySnake.xx - snakeList[i].pts[j].xx;
+                        nsdYY = mySnake.yy - snakeList[i].pts[j].yy;
 						sId = snakeList[i].id;
 					}
 				}
 			}
 		}
 
-		callback({ blocksAway: blocks, thickness: 0, snakeId: sId }); // todo
-	}
+		callback({ blocksAway: blocks, thickness: 0, snakeId: sId, nearestSnakeDXX : nsdXX, nearestSnakeDYY : nsdYY }); // todo
+	};
 
 	this.getNearestAndSafestFood = function(callback) {
 		this.mySnake = snake;
@@ -88,22 +86,26 @@ function SlitherBot() {
 		mySnake = this.mySnake;
 		c_food = this.currentFood;
 
+        console.log(c_food[0]);
+        console.log(mySnake.xx + ":" + mySnake.yy);
+
 		var data = { xx: 0, yy: 0 };
 		var distance = 0;
 
 		for(var i = 0; i < c_food.length; i++) {
 			if(c_food[i]) {
 				//if(this.isSafeThere(c_food[i].xx, c_food[i].yy)) {
-					var c_dist = (Math.abs(mySnake.xx - c_food[i].xx) + Math.abs(mySnake.yy - c_food[i].yy)) / 2;
-					if(distance == 0 || c_dist < distance) {
+
+					var c_dist = (Math.abs(mySnake.xx - c_food[i].rx) + Math.abs(mySnake.yy - c_food[i].ry)) / 2;
+					if(distance === 0 || (c_dist > 42 && c_dist < distance) ) { // Minimum dist to prevent circling around food
 						distance = c_dist;
-						data = { xx: c_food[i].xx, yy: c_food[i].yy, id: c_food[i].id };
+						data = { xx: c_food[i].rx, yy: c_food[i].ry, id: c_food[i].id };
 					}
 				//}
 			}
 		}
 		callback(data);
-	}
+	};
 
 	this.isSafeThere = function(xx, yy) {
 		this.snakeList = snakes;
@@ -114,7 +116,7 @@ function SlitherBot() {
 		}
 
 		return true;
-	}
+	};
 
 	this.iWantAll = function() {
 		localStorage.edttsg = 1;
@@ -131,11 +133,11 @@ function SlitherBot() {
 		window.oncontextmenu = function() {
 			return true;
 		};
-	}
+	};
 
 	this.getNextDirection = function() {
 
-	}
+	};
 
 	this.foodExists = function(id) {
 		foodList = foods;
@@ -149,7 +151,7 @@ function SlitherBot() {
 		}
 
 		return false;
-	}
+	};
  
 	this.autoBot = function() {
 		var parent = this;
@@ -162,22 +164,29 @@ function SlitherBot() {
 		this.log("Started autoBot!");
 		function doBot() {
 			parent.getNearestSnake(function(data) {
-				document.getElementsByClassName("nsi")[19].innerHTML = 'Nearest snake: ' + Math.round(data.blocksAway / 20) + " blocks away<br />Last turn " + Math.round(((Date.now() / 1000) % 60) - parent.lastTurned) + " seconds ago by autoBot";
-				if((data.blocksAway < (data.thickness + 210) && data.blocksAway != 0 && ((((Date.now() / 1000) % 60) - parent.lastTurned) > 4 || data.snakeId != latestSnakeTurnedOn)) || data.blocksAway < (data.thickness + 45)) {
-					latestSnakeTurnedOn = data.snakeId;
-					parent.lastTurned = (Date.now() / 1000) % 60;
-					parent.turnAround();
+                var distToNextSnake = (Math.abs(data.nearestSnakeDYY) + Math.abs(data.nearestSnakeDXX));
+                if ( distToNextSnake < 500 && distToNextSnake > 0 ) { // too close, and there is a snake (none visible == 0)
+                    document.getElementsByClassName("nsi")[19].innerHTML = 'Running from snake at ' + Math.round(data.nearestSnakeDXX) + "," + Math.round(data.nearestSnakeDYY);
+                    document.getElementsByClassName("nsi")[21].innerHTML = 'No time for food';
+                    latestSnakeTurnedOn = data.snakeId;
+                    var rad = Math.atan2(data.nearestSnakeDYY, data.nearestSnakeDXX);
+                    var deg = rad * (180 / Math.PI);
+                    var slitherDeg = deg / 1.286; // degrees / 1.286 is the conversion to "SlitherDeg" 
+                    parent.setDirection(slitherDeg);
+//					latestSnakeTurnedOn = data.snakeId;
+//					parent.lastTurned = (Date.now() / 1000);
 				} else {
+                    document.getElementsByClassName("nsi")[19].innerHTML = 'Collecting food';
 					parent.getNearestAndSafestFood(function(data) {
-						if((((Date.now() / 1000) % 60) - parent.lastTurned) > 6) {
-							if(targetedFood != 0 && foodExists(targetedFood)) {
+						//if((((Date.now() / 1000) ) - parent.lastTurned) > 6) { // 6
+							if(targetedFood !== 0 && foodExists(targetedFood)) {
 								data.xx = targetedFoodX;
 								data.yy = targetedFoodY;
 							}
 
-							if(data.xx != 0 && data.yy != 0) {
-								var dX = Math.abs(data.xx - parent.mySnake.xx);
-								var dY = Math.abs(data.yy - parent.mySnake.yy);
+							if(data.xx !== 0 && data.yy !== 0) {
+								var dX = data.xx - parent.mySnake.xx;
+								var dY = data.yy - parent.mySnake.yy;
 
 								targetedFoodX = data.xx;
 								targetedFoodY = data.yy;
@@ -189,34 +198,34 @@ function SlitherBot() {
 								document.getElementsByClassName("nsi")[21].style.color = '#fff';
 								document.getElementsByClassName("nsi")[21].style.font = 'Arial';
 								document.getElementsByClassName("nsi")[21].width = "250px";
-								document.getElementsByClassName("nsi")[21].innerHTML = "Nearest food: " + data.xx + ", " + data.yy + "<br />Setting deg to: " + slitherDeg;
+								document.getElementsByClassName("nsi")[21].innerHTML = "FoodDelta " + Math.round(dX) + "<br />" + Math.round(dY) + "<br />Deg : " + Math.round(slitherDeg);
 
 								parent.setDirection(slitherDeg);
 							}
-						}
+						//}
 					});
 				}
-				setTimeout(function(){doBot();}, 500);
+				setTimeout(function(){doBot();}, 100);
 			});
 		}
 		doBot();
-	}
+	};
 
 	this.log = function(txt) {
 		console.info("[SlitherBot] [" + version + "] " + txt);
-	}
+	};
 
 	this.autoTasks = function() {
 		var parent = this;
 		setInterval(function() {
 			if(parent.hideAll) parent.hideSnakes();
-		}, 500);
-	}
+		}, 100);
+	};
 
 	this.hideSnakes = function() {
 		this.snakes = snakes; // i want to keep 'em!
 		snakes = [snake];
-	}
+	};
 }
 
 var bot = new SlitherBot();
@@ -226,13 +235,11 @@ bot.iWantAll();
 window.onmousemove = null;
 
 document.onkeypress = function(e) {
-	if(String.fromCharCode(e.which) == "t") {
-		bot.turnAround();
-	} else if(String.fromCharCode(e.which) == "b") {
+	if(String.fromCharCode(e.which) == "b") {
 		bot.bot();
 	} else if(String.fromCharCode(e.which) == "s") {
 		bot.autoBot();
 	} else if(String.fromCharCode(e.which) == "h") {
 		bot.hideAll = true;
 	}
-}
+};
