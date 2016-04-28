@@ -1,18 +1,26 @@
 // ==UserScript==
 // @name         SlitherBot
 // @namespace    SlitherBot
-// @version      0.1-ALPHA1
+// @version      0.11
 // @author       j0ll3, wolframteetz
 // @match        http://slither.io/
 // @grant        none
 // ==/UserScript==
 
 var version = "0.11";
+
 // This is a very passive version of the bot with various fixes.
 // It never accelerates, tries to stay away from snakes and eats.
-// todo : Go "eat big" fist (get the size of the food somehow)
-// todo : "Run away" when getting circled
-// todo : "Kill mode"
+
+// Improvement list
+//
+// Size of the Food bubbles
+// TSP - Like "General direction"
+// Escape hunting snakes function
+// Hunt snakes functions
+// a) Cut path function
+// b) Circle snake function
+// Go to border function (safe there to collect, you can't be circled easily...
 
 function SlitherBot() {
 	this.name = "SlitherBot v" + version;
@@ -45,7 +53,6 @@ function SlitherBot() {
 	};
 
     this.snakeList = snakes;
-
 	this.mySnake = snake;
 
 	this.getNearestSnake = function(callback) {
